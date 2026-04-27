@@ -4,7 +4,7 @@ import { getDB } from "../db.js";
 
 const r = Router();
 
-const UNIVERSAL_KEY = "sk-emergent-154FdDaA604615b2b7"; // Provided by user
+const UNIVERSAL_KEY = process.env.UNIVERSAL_KEY; // Provided via .env
 const LLM_BASE_URL = "https://integrations.emergentagent.com/llm/v1/chat/completions";
 
 r.post("/chat", async (req, res) => {
