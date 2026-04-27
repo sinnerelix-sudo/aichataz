@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-primary: #6366f1;
+  --color-brand-secondary: #a855f7;
+  --color-bg-main: #f8fafc;
+  --color-card-bg: #ffffff;
+  --font-heading: 'Inter', sans-serif;
+}
+
+body {
+  @apply bg-bg-main text-slate-900 font-sans antialiased;
+}
+
+.glass-card {
+  @apply bg-white/70 backdrop-blur-md border border-white/20 shadow-xl;
+}
