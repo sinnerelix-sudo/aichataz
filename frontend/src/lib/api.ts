@@ -8,4 +8,8 @@ export const api = axios.create({
 
 export const getBots = () => api.get('/bots');
 export const createBot = (data: any) => api.post('/bots', data);
-export const chatWithBot = (data: any) => api.post('/ai/chat', data);
+export const updateBot = (id: string, data: any) => api.put(`/bots/${id}`, data);
+export const getLogs = () => api.get('/bots/logs');
+
+export const getInstagramAuthUrl = (botId: string) => 
+  `${API_URL}/auth/instagram/start?bot_id=${botId}`;
