@@ -60,7 +60,7 @@ r.get("/callback", async (req, res) => {
       await db.collection("bots").updateOne(
         { _id: new ObjectId(bot_id) },
         { 
-          : { 
+          $set: { 
             ig_access_token: encrypt(access_token), 
             ig_user_id: ig_user_id,
             ig_connected: true,
@@ -70,11 +70,11 @@ r.get("/callback", async (req, res) => {
       );
     }
 
-    res.json({ success: true, message: "Instagram connected successfully" });
+    return res.json({ success: true, message: "Instagram connected successfully" });
 
   } catch (err) {
     console.error("IG OAuth Error:", err.response?.data || err.message);
-    res.status(500).json({ success: false, message: "Authentication failed" });
+    return res.status(500).json({ success: false, message: "Authentication failed" });
   }
 });
 
