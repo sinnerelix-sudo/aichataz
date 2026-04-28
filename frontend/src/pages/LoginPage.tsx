@@ -4,7 +4,7 @@ import { Mail, Lock, ArrowRight, Loader2, Sparkles, AlertCircle } from 'lucide-r
 import { api } from '../lib/api';
 
 export default function LoginPage() {
-  const navigate = useNavigate();
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ email: '', password: '' });
