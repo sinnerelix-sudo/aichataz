@@ -34,7 +34,7 @@ export default function RegisterPage() {
       localStorage.setItem('userId', res.data.userId);
       setStep(2); 
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Qeydiyyat zamanı xəta baş verdi. Zəhmət olmasa yenidən cəhd edin.";
+      const msg = err.response?.data?.error || err.message || "Qeydiyyat zamanı xəta baş verdi.";
       setError(msg);
     } finally {
       setLoading(false);
