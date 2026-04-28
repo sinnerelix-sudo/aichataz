@@ -15,7 +15,7 @@ export async function connectDB() {
   if (db) return db;
   await client.connect();
   db = client.db(dbName);
-  console.log(`✅ MongoDB Connected: ${dbName}`);
+  console.log("✅ MongoDB Connected Successfully");
   
   // Create Essential Indexes
   await db.collection("users").createIndex({ email: 1 }, { unique: true });
