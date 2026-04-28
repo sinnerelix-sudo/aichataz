@@ -4,14 +4,15 @@ import { getDB } from "../db.js";
 
 const r = Router();
 
-const APP_ID = process.env.FACEBOOK_APP_ID;
-const APP_SECRET = process.env.FACEBOOK_APP_SECRET;
+// Using Instagram-specific credentials as requested
+const CLIENT_ID = process.env.INSTAGRAM_APP_ID || process.env.INSTAGRAM_CLIENT_ID;
+const CLIENT_SECRET = process.env.INSTAGRAM_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET;
 const REDIRECT_URI = "https://aichataz.onrender.com/api/auth/instagram/callback";
 
-// 1. Start OAuth Flow
+// 1. Start OAuth Flow for Instagram
 r.get("/start", (req, res) => {
   const scope = "instagram_business_basic,instagram_manage_comments,instagram_business_manage_messages";
-  const url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${APP_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
+  const url = `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${scope}`;
   res.redirect(url);
 });
 
@@ -21,11 +22,10 @@ r.get("/callback", async (req, res) => {
   if (!code) return res.status(400).send("No code provided");
 
   try {
-    // Exchange code for Access Token
-    // Note: Instagram OAuth exchange endpoint is often different from Facebook
+    // Exchange code for Instagram Access Token
     const tokenRes = await axios.post(`https://api.instagram.com/oauth/access_token`, new URLSearchParams({
-      client_id: APP_ID,
-      client_secret: APP_SECRET,
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
       grant_type: "authorization_code",
       redirect_uri: REDIRECT_URI,
       code
@@ -36,6 +36,7 @@ r.get("/callback", async (req, res) => {
     const userAccessToken = tokenRes.data.access_token;
     const userId = tokenRes.data.user_id;
 
+    // TODO: In a production app, save these to MongoDB linked to the logged-in user/shop
     res.json({
       message: "Instagram connected successfully!",
       access_token: userAccessToken,
