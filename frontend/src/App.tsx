@@ -10,20 +10,17 @@ import Sidebar from './components/layout/Sidebar';
 import { api } from './lib/api';
 import { Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 
-class AppErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean; error: any }> {
-  state = { hasError: false, error: null };
-  static getDerivedStateFromError(error: any) { return { hasError: true, error }; }
-  componentDidCatch(error: any, info: any) { console.error("🛑 [APP CRASH]:", error, info); }
+class AppErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean }> {
+  state = { hasError: false };
+  static getDerivedStateFromError() { return { hasError: true }; }
   render() {
     if (this.state.hasError) return (
-      <div className="h-screen w-screen flex items-center justify-center bg-white p-6">
-        <div className="max-w-md w-full text-center space-y-6">
-            <AlertCircle className="w-16 h-16 text-red-500 mx-auto" />
-            <h2 className="text-2xl font-black text-slate-900">Xəta baş verdi</h2>
-            <p className="text-slate-500 font-bold leading-relaxed">Səhifə yüklənərkən problem yarandı. Zəhmət olmasa yenidən cəhd edin.</p>
-            <button onClick={() => window.location.reload()} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black flex items-center justify-center gap-2 hover:bg-indigo-700 transition-all">
-                <RefreshCw size={20} /> Səhifəni yenilə
-            </button>
+      <div className="h-screen w-screen flex items-center justify-center bg-white p-10 text-center">
+        <div className="max-w-md space-y-6">
+            <AlertCircle size={60} className="text-red-500 mx-auto" />
+            <h1 className="text-3xl font-black">Xəta baş verdi</h1>
+            <p className="text-slate-500 font-bold">Səhifəni yeniləyərək yenidən cəhd edin.</p>
+            <button onClick={() => window.location.reload()} className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black flex items-center justify-center gap-2"> <RefreshCw size={20} /> Yenilə</button>
         </div>
       </div>
     );
@@ -32,34 +29,35 @@ class AppErrorBoundary extends React.Component<{ children: ReactNode }, { hasErr
 }
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<{ loading: boolean; user: any | null }>({ loading: true, user: null });
+  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token) { setState({ loading: false, user: null }); return; }
+    if (!token) { setLoading(false); return; }
     
     api.get('/auth/me').then(res => {
-        localStorage.setItem('user', JSON.stringify(res.data.user));
-        if (res.data.subscription) localStorage.setItem('subscription', JSON.stringify(res.data.subscription));
-        setState({ loading: false, user: res.data.user });
+        setUser(res.data.user);
+        if (res.data.user) localStorage.setItem('userId', res.data.user._id || res.data.user.id);
+        setLoading(false);
     }).catch(() => {
         localStorage.clear();
-        setState({ loading: false, user: null });
+        setLoading(false);
     });
   }, []);
 
-  if (state.loading) return (
+  if (loading) return (
     <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#FDFCFB]">
       <Loader2 className="animate-spin text-indigo-600 mb-4" size={48} />
-      <p className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">Yoxlanılır...</p>
+      <p className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">Giriş yoxlanılır...</p>
     </div>
   );
 
-  if (!state.user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/login" replace />;
   return (
     <div className="flex min-h-screen bg-slate-50 font-sans relative">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto relative"> {children} </main>
+      <main className="flex-1 overflow-y-auto"> {children} </main>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import { Router } from "express";
 import { getDB } from "../db.js";
 import { ObjectId } from "mongodb";
-import { PLANS } from "../plans.js";
 import { ensureActiveSubscription } from "./auth.js";
 
 const r = Router();
@@ -10,25 +9,23 @@ r.get("/", async (req, res) => {
   const { userId } = req.query;
   if (!userId || userId === 'null' || userId === 'undefined') return res.json([]);
   const db = getDB();
-  const bots = await db.collection("bots").find({ ownerId: new ObjectId(userId) }).toArray();
-  res.json(bots);
+  try {
+    const bots = await db.collection("bots").find({ ownerId: new ObjectId(userId) }).toArray();
+    res.json(bots);
+  } catch (e) { res.json([]); }
 });
 
 r.post("/", async (req, res) => {
   const { name, niche, prompt, knowledge_base, userId } = req.body;
-  if (!userId) return res.status(401).json({ error: "İstifadəçi tapılmadı. Yenidən giriş edin." });
+  if (!userId) return res.status(401).json({ error: "Giriş lazımdır." });
   
-  const db = getDB();
   try {
+    const db = getDB();
     const sub = await ensureActiveSubscription(userId);
-    const plan = Object.values(PLANS).find(p => p.id === sub.planId) || PLANS.COMBO;
     const count = await db.collection("bots").countDocuments({ ownerId: new ObjectId(userId) });
 
-    if (count >= plan.botLimit) {
-      return res.status(403).json({ 
-        error: `Paket limiti dolub. Ən çox ${plan.botLimit} bot yarada bilərsiniz.`,
-        code: "LIMIT_REACHED"
-      });
+    if (count >= (sub.botLimit || 5)) {
+      return res.status(403).json({ error: "Bot limiti dolub. Sınaq mərhələsində maksimum 5 bot mümkündür." });
     }
 
     const bot = { 
@@ -38,7 +35,7 @@ r.post("/", async (req, res) => {
     await db.collection("bots").insertOne(bot);
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: "Bot yaradılanda server xətası baş verdi." });
+    res.status(500).json({ error: "Bot yaradıla bilmədi." });
   }
 });
 
@@ -46,10 +43,11 @@ r.get("/logs", async (req, res) => {
   const { userId } = req.query;
   if (!userId || userId === 'null') return res.json([]);
   const db = getDB();
-  const bots = await db.collection("bots").find({ ownerId: new ObjectId(userId) }).project({_id: 1}).toArray();
-  const botIds = bots.map(b => b._id);
-  const logs = await db.collection("logs").find({ bot_id: { $in: botIds } }).sort({ timestamp: -1 }).limit(50).toArray();
-  res.json(logs);
+  try {
+    const bots = await db.collection("bots").find({ ownerId: new ObjectId(userId) }).project({_id: 1}).toArray();
+    const logs = await db.collection("logs").find({ bot_id: { $in: bots.map(b => b._id) } }).sort({ timestamp: -1 }).limit(20).toArray();
+    res.json(logs);
+  } catch (e) { res.json([]); }
 });
 
 export default r;
