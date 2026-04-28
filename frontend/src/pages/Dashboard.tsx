@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MessageSquare, Users, TrendingUp, CheckCircle2, Plus } from 'lucide-react';
 import { getBots } from '../lib/api';
 
