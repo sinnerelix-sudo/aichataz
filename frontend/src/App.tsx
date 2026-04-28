@@ -6,44 +6,67 @@ import PaymentPage from './pages/PaymentPage';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/layout/Sidebar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 import { api } from './lib/api';
 import { Loader2 } from 'lucide-react';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const [auth, setAuth] = useState<{ loading: boolean; user: any | null }>({ loading: true, user: null });
+// MVP Config
+const PAYMENT_ENABLED = false;
+
+function ProtectedRoute({ children }: { children: ReactNode }) {
+  const [state, setState] = useState<{ loading: boolean; user: any | null; sub: any | null }>({ 
+    loading: true, user: null, sub: null 
+  });
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      setAuth({ loading: false, user: null });
+      console.log("🔒 [GUARD]: No token found. Redirecting to login.");
+      setState({ loading: false, user: null, sub: null });
       return;
     }
     
-    api.get('/auth/me', { headers: { Authorization: `Bearer ${token}` } })
-      .then(res => setAuth({ loading: false, user: res.data }))
-      .catch(() => setAuth({ loading: false, user: null }));
+    console.log("🔄 [GUARD]: Fetching user info...");
+    api.get('/auth/me')
+      .then(res => {
+        console.log("✅ [GUARD]: User info fetched successfully:", res.data);
+        localStorage.setItem('user', JSON.stringify(res.data.user));
+        if (res.data.subscription) {
+            localStorage.setItem('subscription', JSON.stringify(res.data.subscription));
+        }
+        setState({ loading: false, user: res.data.user, sub: res.data.subscription });
+      })
+      .catch((err) => {
+        console.error("❌ [GUARD]: Auth fetch failed:", err);
+        localStorage.clear();
+        setState({ loading: false, user: null, sub: null });
+      });
   }, []);
 
-  if (auth.loading) {
+  if (state.loading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <Loader2 className="animate-spin text-indigo-600" size={40} />
+      <div className="h-screen w-screen flex flex-col items-center justify-center bg-[#FDFCFB]">
+        <Loader2 className="animate-spin text-indigo-600 mb-4" size={48} />
+        <p className="font-black text-[10px] uppercase tracking-[0.3em] text-slate-400">Yoxlanılır...</p>
       </div>
     );
   }
 
-  if (!auth.user) return <Navigate to="/login" replace />;
+  if (!state.user) return <Navigate to="/login" replace />;
   
-  // Basic Subscription/Payment Guard
-  if (!auth.user.subscription || auth.user.subscription.status !== 'active') {
-      return <Navigate to="/pricing" replace />;
+  // MVP GUARD: Only redirect to pricing if PAYMENT_ENABLED is true AND no active sub exists
+  if (PAYMENT_ENABLED) {
+      const isPaid = state.sub && state.sub.status === 'active' && state.sub.paymentStatus === 'paid';
+      if (!isPaid) {
+          console.warn("💰 [GUARD]: Subscription not active/paid. Redirecting to pricing.");
+          return <Navigate to="/pricing" replace />;
+      }
   }
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 font-sans">
       <Sidebar />
-      <main className="flex-1 overflow-y-auto">
+      <main className="flex-1 overflow-y-auto relative">
         {children}
       </main>
     </div>
@@ -60,13 +83,11 @@ export default function App() {
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/login" element={<LoginPage />} />
         
-        {/* Dashboard and its sub-pages */}
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/chats" element={<ProtectedRoute><div>Chats Page (Tezliklə)</div></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><div>Orders Page (Tezliklə)</div></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><div>Settings Page (Tezliklə)</div></ProtectedRoute>} />
+        <Route path="/chats" element={<ProtectedRoute><div className="p-10 font-bold">Tezliklə...</div></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><div className="p-10 font-bold">Tezliklə...</div></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><div className="p-10 font-bold">Tezliklə...</div></ProtectedRoute>} />
         
-        {/* Wildcard redirect to dashboard or landing */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
