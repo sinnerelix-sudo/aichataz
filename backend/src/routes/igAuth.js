@@ -31,7 +31,7 @@ r.get("/start", (req, res) => {
   });
 
   const url = `https://www.instagram.com/oauth/authorize?${params.toString()}`;
-  console.log("🚀 Starting Instagram OAuth for bot:", bot_id);
+  console.log(`🚀 [IG OAuth] Starting for bot ${bot_id}`);
   res.redirect(url);
 });
 
@@ -40,6 +40,7 @@ r.get("/callback", async (req, res) => {
   const { code, state } = req.query;
   
   if (!code) {
+    console.error("❌ [IG OAuth] No code received in callback");
     return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=no_code`);
   }
 
@@ -48,7 +49,7 @@ r.get("/callback", async (req, res) => {
     const decodedState = JSON.parse(Buffer.from(state, 'base64url').toString());
     bot_id = decodedState.bot_id;
   } catch (err) {
-    console.error("❌ Failed to decode state:", err.message);
+    console.error("❌ [IG OAuth] Failed to decode state:", err.message);
     return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=invalid_state`);
   }
 
@@ -69,8 +70,8 @@ r.get("/callback", async (req, res) => {
 
     if (bot_id) {
       const db = getDB();
-      // Update bot with connection details
-      await db.collection("bots").updateOne(
+      // Update bot with connection details - ensuring field names match requirements
+      const updateResult = await db.collection("bots").updateOne(
         { _id: new ObjectId(bot_id) },
         { 
           $set: { 
@@ -78,18 +79,29 @@ r.get("/callback", async (req, res) => {
             ig_user_id: ig_user_id,
             ig_connected: true,
             ig_connected_at: new Date(),
-            updated_at: new Date()
+            updated_at: new Date(),
+            // Adding specific fields requested for consistency
+            instagramConnected: true,
+            instagramUserId: ig_user_id,
+            encryptedInstagramToken: encrypt(access_token),
+            instagramConnectedAt: new Date()
           } 
         }
       );
-      console.log(`✅ Bot ${bot_id} linked to IG User ${ig_user_id}`);
-      return res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
+      
+      if (updateResult.matchedCount > 0) {
+        console.log(`✅ [IG OAuth] Bot ${bot_id} linked to IG User ${ig_user_id}`);
+        return res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
+      } else {
+        console.error(`❌ [IG OAuth] Bot ${bot_id} not found in database`);
+        return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=bot_not_found`);
+      }
     }
 
     return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
 
   } catch (err) {
-    console.error("❌ Instagram Callback Error:", err.response?.data || err.message);
+    console.error("❌ [IG OAuth] Token exchange error:", err.response?.data || err.message);
     return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
   }
 });

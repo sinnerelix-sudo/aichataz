@@ -16,6 +16,7 @@ const PORT = process.env.PORT || 10000;
 // Middleware
 app.use((req, res, next) => { 
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`); 
+app.get("/api/debug/bots", (req, res) => res.redirect("/api/bots/debug/all"));
   next(); 
 });
 
