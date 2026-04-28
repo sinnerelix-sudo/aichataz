@@ -9,6 +9,7 @@ import aiRoutes from "./routes/ai.js";
 import webhookRoutes from "./routes/webhook.js";
 import igAuthRoutes from "./routes/igAuth.js";
 import paymentRoutes from "./routes/payment.js";
+app.use((req, res, next) => { console.log(`${req.method} ${req.url}`); next(); });
 
 console.log("🚀 Initializing AI Operator Backend (2026 Standards)...");
 
@@ -16,7 +17,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(cors({
-  origin: ["https://www.aioperator.social", "https://aioperator.social", "http://localhost:5173", "http://localhost:3000"],
+  origin: ["https://www.aioperator.social", "https://aioperator.social", "https://aichataz.vercel.app", "http://localhost:5173", "http://localhost:3000"],
   credentials: true
 }));
 app.use(express.json());
