@@ -8,8 +8,9 @@ const r = Router();
 
 const CLIENT_ID = process.env.INSTAGRAM_APP_ID || "26461530366882280";
 const CLIENT_SECRET = process.env.INSTAGRAM_APP_SECRET;
+// Force the redirect to the EXACT domain the user is likely on
 const REDIRECT_URI = "https://aichataz.onrender.com/api/auth/instagram/callback";
-const FRONTEND_URL = process.env.FRONTEND_URL || "https://www.aioperator.social";
+const FRONTEND_URL = "https://www.aioperator.social"; 
 const SCOPE = "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_messages";
 
 r.get("/start", (req, res) => {
@@ -25,7 +26,9 @@ r.get("/start", (req, res) => {
     scope: SCOPE,
     state: state
   });
-  res.redirect(`https://www.instagram.com/oauth/authorize?${params.toString()}`);
+  const url = `https://www.instagram.com/oauth/authorize?${params.toString()}`;
+  console.log("🚀 [IG] Redirecting to:", url);
+  res.redirect(url);
 });
 
 r.get("/callback", async (req, res) => {
@@ -51,21 +54,24 @@ r.get("/callback", async (req, res) => {
 
     const { access_token, user_id } = tokenRes.data;
     const db = getDB();
+    
     await db.collection("bots").updateOne(
       { _id: new ObjectId(bot_id) },
       { $set: { 
           ig_access_token: encrypt(access_token), 
           ig_user_id: user_id, 
           ig_connected: true, 
-          instagramConnected: true,
-          instagramUserId: user_id,
-          encryptedInstagramToken: encrypt(access_token),
-          ig_connected_at: new Date() 
+          updated_at: new Date() 
       }}
     );
-    res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
+    
+    console.log("✅ [IG] Linked successfully. Redirecting to Dashboard.");
+    // Force a fresh reload on dashboard
+    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
   } catch (err) {
-    res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
+    console.error("❌ [IG] Callback error:", err.response?.data || err.message);
+    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
   }
 });
+
 export default r;
