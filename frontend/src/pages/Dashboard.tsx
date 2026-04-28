@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { 
-  MessageSquare, TrendingUp, CheckCircle2, 
+  TrendingUp, CheckCircle2, 
   Plus, X, Camera, Activity, AlertCircle, Loader2, RefreshCw 
 } from 'lucide-react';
 import { getBots, createBot, getLogs, getInstagramAuthUrl } from '../lib/api';

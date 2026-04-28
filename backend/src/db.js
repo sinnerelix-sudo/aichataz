@@ -1,7 +1,7 @@
 import { MongoClient } from "mongodb";
 
 const uri = process.env.MONGODB_URI;
-const dbName = process.env.DB_NAME || "aichataz";
+const dbName = process.env.DB_NAME || "aichataz_db";
 
 if (!uri) {
   console.error("MONGODB_URI is not set");
@@ -17,10 +17,12 @@ export async function connectDB() {
   db = client.db(dbName);
   console.log("✅ MongoDB Connected Successfully");
   
-  // Create Essential Indexes
+  // Indexes
   await db.collection("users").createIndex({ email: 1 }, { unique: true });
-  await db.collection("bots").createIndex({ owner_id: 1 });
-  await db.collection("conversations").createIndex({ bot_id: 1, external_user_id: 1 });
+  await db.collection("subscriptions").createIndex({ userId: 1 });
+  await db.collection("bots").createIndex({ ownerId: 1 });
+  await db.collection("products").createIndex({ botId: 1 });
+  await db.collection("logs").createIndex({ bot_id: 1, timestamp: -1 });
   
   return db;
 }
