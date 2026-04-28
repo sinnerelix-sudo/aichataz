@@ -1,12 +1,22 @@
 import { useEffect, useState } from 'react';
-import { MessageSquare, Users, TrendingUp, CheckCircle2, Plus } from 'lucide-react';
-import { getBots } from '../lib/api';
+import { MessageSquare, Users, TrendingUp, CheckCircle2, Plus, X } from 'lucide-react';
+import { getBots, createBot } from '../lib/api';
 
 export default function Dashboard() {
   const [bots, setBots] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // New Bot Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    niche: '',
+    prompt: '',
+    knowledge_base: ''
+  });
 
-  useEffect(() => {
+  const fetchBots = () => {
+    setLoading(true);
     getBots().then(res => {
       setBots(res.data);
       setLoading(false);
@@ -14,7 +24,24 @@ export default function Dashboard() {
       console.error(err);
       setLoading(false);
     });
+  };
+
+  useEffect(() => {
+    fetchBots();
   }, []);
+
+  const handleCreateBot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await createBot(formData);
+      setIsModalOpen(false);
+      setFormData({ name: '', niche: '', prompt: '', knowledge_base: '' });
+      fetchBots();
+    } catch (err) {
+      alert("Bot yaradılanda xəta baş verdi.");
+      console.error(err);
+    }
+  };
 
   return (
     <div className="p-8 space-y-8 max-w-7xl mx-auto">
@@ -24,7 +51,10 @@ export default function Dashboard() {
           <p className="text-slate-500 mt-1">Botunuzun fəaliyyətini burdan izləyə bilərsiniz.</p>
         </div>
         <div className="flex gap-3">
-          <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-2">
+          <button 
+            onClick={() => setIsModalOpen(true)}
+            className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-semibold shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-all flex items-center gap-2"
+          >
             <Plus size={18} /> Yeni Bot Yarat
           </button>
         </div>
@@ -33,8 +63,8 @@ export default function Dashboard() {
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {[
-          { label: 'Cəmi Mesajlar', value: '1,284', icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'Yeni Lead-lər', value: '42', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+          { label: 'Cəmi Mesajlar', value: '0', icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Yeni Lead-lər', value: '0', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
           { label: 'Sürət', value: '0.2s', icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50' },
           { label: 'Bot Statusu', value: bots.length > 0 ? 'Aktiv' : 'Yoxdur', icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
         ].map((stat) => (
@@ -52,7 +82,7 @@ export default function Dashboard() {
         <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-50 flex justify-between items-center">
             <h2 className="font-bold text-lg text-slate-800">Botlar</h2>
-            <button className="text-indigo-600 text-sm font-medium hover:underline">Hamısına bax</button>
+            <button onClick={fetchBots} className="text-indigo-600 text-sm font-medium hover:underline">Yenilə</button>
           </div>
           <div className="divide-y divide-slate-50">
             {loading ? (
@@ -100,6 +130,68 @@ export default function Dashboard() {
           <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl" />
         </div>
       </div>
+
+      {/* Create Bot Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+              <h2 className="text-xl font-bold text-slate-800">Yeni AI Bot Yarat</h2>
+              <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-400">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleCreateBot} className="p-6 space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">Botun Adı</label>
+                <input 
+                  type="text" required 
+                  placeholder="Məs: Xonça Satışı Botu"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  value={formData.name}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">Niş (Sahə)</label>
+                <input 
+                  type="text" required 
+                  placeholder="Məs: Xonça satışı, Güllər"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  value={formData.niche}
+                  onChange={e => setFormData({...formData, niche: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">AI Təlimatı (Prompt)</label>
+                <textarea 
+                  required rows={3}
+                  placeholder="Bot necə danışmalıdır? (Məs: Sən xonça üzrə mütəxəssissən...)"
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                  value={formData.prompt}
+                  onChange={e => setFormData({...formData, prompt: e.target.value})}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-semibold text-slate-700">Bilgi Bazası (Məhsullar və Qiymətlər)</label>
+                <textarea 
+                  required rows={4}
+                  placeholder="Məhsul adlarını və qiymətlərini qeyd edin..."
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                  value={formData.knowledge_base}
+                  onChange={e => setFormData({...formData, knowledge_base: e.target.value})}
+                />
+              </div>
+              <button 
+                type="submit"
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg shadow-indigo-100 hover:bg-indigo-700 active:scale-[0.98] transition-all mt-4"
+              >
+                Botu Aktivləşdir 🚀
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
