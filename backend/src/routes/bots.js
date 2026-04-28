@@ -31,4 +31,11 @@ r.get("/", async (req, res) => {
   res.json(bots);
 });
 
+// Get Activity Logs
+r.get("/logs", async (req, res) => {
+  const db = getDB();
+  const logs = await db.collection("logs").find().sort({ timestamp: -1 }).limit(50).toArray();
+  res.json(logs);
+});
+
 export default r;
