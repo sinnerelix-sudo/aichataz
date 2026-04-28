@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { 
-  MessageSquare, Users, TrendingUp, CheckCircle2, 
-  Plus, X, Instagram, Activity, AlertCircle, Loader2, RefreshCw 
+  MessageSquare, TrendingUp, CheckCircle2, 
+  Plus, X, Camera, Activity, AlertCircle, Loader2, RefreshCw 
 } from 'lucide-react';
 import { getBots, createBot, getLogs, getInstagramAuthUrl } from '../lib/api';
 
@@ -108,7 +108,7 @@ export default function Dashboard() {
         {[
           { label: 'Cəmi Aktivlik', value: logs.length, icon: Activity, color: 'text-blue-600', bg: 'bg-blue-50' },
           { label: 'Aktiv Botlar', value: bots.filter(b => b.is_active).length, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50' },
-          { label: 'Instagram', value: bots.some(b => b.ig_connected) ? 'Bağlı' : 'Yoxdur', icon: Instagram, color: 'text-pink-600', bg: 'bg-pink-50' },
+          { label: 'Instagram', value: bots.some(b => b.ig_connected) ? 'Bağlı' : 'Yoxdur', icon: Camera, color: 'text-pink-600', bg: 'bg-pink-50' },
           { label: 'AI Model', value: 'Gemini 2.0', icon: TrendingUp, color: 'text-indigo-600', bg: 'bg-indigo-50' },
         ].map((stat) => (
           <div key={stat.label} className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group">
@@ -150,7 +150,7 @@ export default function Dashboard() {
                         href={getInstagramAuthUrl(bot._id)} 
                         className="px-5 py-2 bg-pink-600 text-white text-xs font-bold rounded-xl shadow-lg shadow-pink-100 hover:bg-pink-700 active:scale-[0.95] transition-all flex items-center gap-2"
                       >
-                        <Instagram size={14} /> Instagram'ı Bağla
+                         <Camera size={14} /> Instagram'ı Bağla
                       </a>
                     )}
                     <span className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest ${bot.is_active ? 'text-green-500' : 'text-slate-300'}`}>
