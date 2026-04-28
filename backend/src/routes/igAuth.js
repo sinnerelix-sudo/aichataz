@@ -9,9 +9,17 @@ const r = Router();
 const CLIENT_ID = process.env.INSTAGRAM_APP_ID || process.env.INSTAGRAM_CLIENT_ID;
 const CLIENT_SECRET = process.env.INSTAGRAM_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET;
 const REDIRECT_URI = "https://aichataz.onrender.com/api/auth/instagram/callback";
+const FRONTEND_URL = process.env.FRONTEND_URL || "https://www.aioperator.social";
 const SCOPE = "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_messages";
 
-const generateAuthUrl = (bot_id) => {
+// 1. Start OAuth Flow
+r.get("/start", (req, res) => {
+  const { bot_id } = req.query;
+  if (!bot_id) return res.status(400).send("bot_id is required");
+
+  // Encode bot_id into state
+  const state = Buffer.from(JSON.stringify({ bot_id })).toString("base64url");
+
   const params = new URLSearchParams({
     enable_fb_login: "0",
     force_authentication: "1",
@@ -19,29 +27,32 @@ const generateAuthUrl = (bot_id) => {
     redirect_uri: REDIRECT_URI,
     response_type: "code",
     scope: SCOPE,
-    state: bot_id || ""
+    state: state
   });
-  return `https://www.instagram.com/oauth/authorize?${params.toString()}`;
-};
 
-r.get("/start", (req, res) => {
-  res.redirect(generateAuthUrl(req.query.bot_id));
+  const url = `https://www.instagram.com/oauth/authorize?${params.toString()}`;
+  console.log("🚀 Starting IG OAuth for bot:", bot_id);
+  res.redirect(url);
 });
 
-r.get("/debug/url", (req, res) => {
-  res.json({
-    client_id: CLIENT_ID,
-    redirect_uri: REDIRECT_URI,
-    scope: SCOPE,
-    authorize_url: generateAuthUrl()
-  });
-});
-
+// 2. OAuth Callback
 r.get("/callback", async (req, res) => {
-  const { code, state: bot_id } = req.query;
-  if (!code) return res.status(400).json({ success: false, message: "No code provided" });
+  const { code, state } = req.query;
+  
+  if (!code) {
+    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=no_code`);
+  }
+
+  let bot_id;
+  try {
+    const decodedState = JSON.parse(Buffer.from(state, 'base64url').toString());
+    bot_id = decodedState.bot_id;
+  } catch (err) {
+    console.error("❌ Failed to decode state:", err.message);
+  }
 
   try {
+    // Exchange code for Access Token
     const tokenRes = await axios.post(`https://api.instagram.com/oauth/access_token`, new URLSearchParams({
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
@@ -55,7 +66,7 @@ r.get("/callback", async (req, res) => {
     const access_token = tokenRes.data.access_token;
     const ig_user_id = tokenRes.data.user_id;
 
-    if (bot_id && bot_id !== "undefined") {
+    if (bot_id) {
       const db = getDB();
       await db.collection("bots").updateOne(
         { _id: new ObjectId(bot_id) },
@@ -64,17 +75,20 @@ r.get("/callback", async (req, res) => {
             ig_access_token: encrypt(access_token), 
             ig_user_id: ig_user_id,
             ig_connected: true,
+            ig_connected_at: new Date(),
             updated_at: new Date()
           } 
         }
       );
+      console.log(`✅ Bot ${bot_id} connected to Instagram user ${ig_user_id}`);
+      return res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
+    } else {
+      return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=missing_bot_id`);
     }
 
-    return res.json({ success: true, message: "Instagram connected successfully" });
-
   } catch (err) {
-    console.error("IG OAuth Error:", err.response?.data || err.message);
-    return res.status(500).json({ success: false, message: "Authentication failed" });
+    console.error("❌ IG OAuth Callback Error:", err.response?.data || err.message);
+    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
   }
 });
 
