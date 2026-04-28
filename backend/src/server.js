@@ -15,6 +15,7 @@ app.use(cors());
 app.use(express.json());
 app.use("/api/bots", botRoutes);
 app.use("/api/auth/instagram", igAuthRoutes);
+app.get("/api/debug/instagram-oauth-url", (req, res) => res.redirect("/api/auth/instagram/debug/url"));
 app.use("/api/webhook", webhookRoutes);
 app.use("/api/ai", aiRoutes);
 
