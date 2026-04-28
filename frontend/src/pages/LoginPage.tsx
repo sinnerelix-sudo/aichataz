@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { api } from '../lib/api';
 
 export default function LoginPage() {
-  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -14,26 +13,16 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
     try {
-      console.log("🚀 [LOGIN]: Attempting login...");
       const res = await api.post('/auth/login', formData);
       const data = res.data;
-      
-      console.log("✅ [LOGIN RESPONSE]:", data);
-
       if (data.token) {
           localStorage.setItem('token', data.token);
           localStorage.setItem('userId', data.user.id);
           localStorage.setItem('user', JSON.stringify(data.user));
-          if (data.subscription) {
-              localStorage.setItem('subscription', JSON.stringify(data.subscription));
-          }
-          
-          console.log("🔗 [LOGIN]: Redirecting to dashboard...");
-          // Hard redirect for mobile stability and clean state
+          if (data.subscription) localStorage.setItem('subscription', JSON.stringify(data.subscription));
           window.location.href = data.redirectTo || "/dashboard";
       }
     } catch (err: any) {
-      console.error("❌ [LOGIN ERROR]:", err);
       setError(err.response?.data?.error || "Giriş zamanı xəta baş verdi.");
     } finally {
       setLoading(false);
@@ -47,8 +36,8 @@ export default function LoginPage() {
           <div className="w-20 h-20 bg-gradient-to-br from-indigo-600 to-indigo-900 text-white rounded-[2rem] flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-indigo-200">
             <Sparkles size={40} />
           </div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tighter">Xoş gəldiniz</h1>
-          <p className="text-slate-400 font-bold mt-2 uppercase tracking-widest text-[10px]">AI Operator Giriş</p>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tighter leading-none">Xoş gəldiniz</h1>
+          <p className="text-slate-400 font-bold mt-3 uppercase tracking-widest text-[10px]">AI Operator Giriş</p>
         </div>
 
         {error && (

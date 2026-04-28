@@ -6,11 +6,10 @@ import PaymentPage from './pages/PaymentPage';
 import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard';
 import Sidebar from './components/layout/Sidebar';
-import { useEffect, useState, ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api } from './lib/api';
 import { Loader2 } from 'lucide-react';
 
-// MVP Config
 const PAYMENT_ENABLED = false;
 
 function ProtectedRoute({ children }: { children: ReactNode }) {
@@ -21,23 +20,19 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) {
-      console.log("🔒 [GUARD]: No token found. Redirecting to login.");
       setState({ loading: false, user: null, sub: null });
       return;
     }
     
-    console.log("🔄 [GUARD]: Fetching user info...");
     api.get('/auth/me')
       .then(res => {
-        console.log("✅ [GUARD]: User info fetched successfully:", res.data);
         localStorage.setItem('user', JSON.stringify(res.data.user));
         if (res.data.subscription) {
             localStorage.setItem('subscription', JSON.stringify(res.data.subscription));
         }
         setState({ loading: false, user: res.data.user, sub: res.data.subscription });
       })
-      .catch((err) => {
-        console.error("❌ [GUARD]: Auth fetch failed:", err);
+      .catch(() => {
         localStorage.clear();
         setState({ loading: false, user: null, sub: null });
       });
@@ -54,13 +49,9 @@ function ProtectedRoute({ children }: { children: ReactNode }) {
 
   if (!state.user) return <Navigate to="/login" replace />;
   
-  // MVP GUARD: Only redirect to pricing if PAYMENT_ENABLED is true AND no active sub exists
   if (PAYMENT_ENABLED) {
       const isPaid = state.sub && state.sub.status === 'active' && state.sub.paymentStatus === 'paid';
-      if (!isPaid) {
-          console.warn("💰 [GUARD]: Subscription not active/paid. Redirecting to pricing.");
-          return <Navigate to="/pricing" replace />;
-      }
+      if (!isPaid) return <Navigate to="/pricing" replace />;
   }
 
   return (
@@ -82,12 +73,10 @@ export default function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/payment" element={<PaymentPage />} />
         <Route path="/login" element={<LoginPage />} />
-        
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/chats" element={<ProtectedRoute><div className="p-10 font-bold">Tezliklə...</div></ProtectedRoute>} />
-        <Route path="/orders" element={<ProtectedRoute><div className="p-10 font-bold">Tezliklə...</div></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><div className="p-10 font-bold">Tezliklə...</div></ProtectedRoute>} />
-        
+        <Route path="/chats" element={<ProtectedRoute><div className="p-10 font-bold text-slate-400 uppercase tracking-widest text-xs">Tezliklə...</div></ProtectedRoute>} />
+        <Route path="/orders" element={<ProtectedRoute><div className="p-10 font-bold text-slate-400 uppercase tracking-widest text-xs">Tezliklə...</div></ProtectedRoute>} />
+        <Route path="/settings" element={<ProtectedRoute><div className="p-10 font-bold text-slate-400 uppercase tracking-widest text-xs">Tezliklə...</div></ProtectedRoute>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
