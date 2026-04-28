@@ -9,6 +9,7 @@ import aiRoutes from "./routes/ai.js";
 import webhookRoutes from "./routes/webhook.js";
 import igAuthRoutes from "./routes/igAuth.js";
 import paymentRoutes from "./routes/payment.js";
+import productRoutes from "./routes/products.js";
 
 const app = express();
 const PORT = process.env.PORT || 10000;
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
 app.get("/api/debug/bots", (req, res) => res.redirect("/api/bots/debug/all"));
   next(); 
 });
+app.use("/api/products", productRoutes);
 
 app.use(cors({
   origin: ["https://www.aioperator.social", "https://aioperator.social", "https://aichataz.vercel.app", "http://localhost:5173", "http://localhost:3000"],

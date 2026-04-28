@@ -9,15 +9,15 @@ const VERIFY_TOKEN = process.env.INSTAGRAM_VERIFY_TOKEN;
 const UNIVERSAL_KEY = process.env.UNIVERSAL_KEY;
 const LLM_BASE_URL = "https://integrations.emergentagent.com/llm/v1/chat/completions";
 
-async function sendIGMessage(recipientId, text, accessToken) {
+async function sendIGMessage(senderId, text, accessToken) {
   try {
     await axios.post(`https://graph.facebook.com/v18.0/me/messages?access_token=${accessToken}`, {
-      recipient: { id: recipientId },
+      recipient: { id: senderId },
       message: { text: text }
     });
-    console.log(`✅ Sent IG message to ${recipientId}`);
+    console.log(`✅ [IG SEND] Sent to ${senderId}`);
   } catch (err) {
-    console.error("❌ Failed to send IG message:", err.response?.data || err.message);
+    console.error("❌ [IG SEND] Failed:", err.response?.data || err.message);
   }
 }
 
@@ -25,58 +25,68 @@ r.get("/", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
-  if (mode === "subscribe" && token === VERIFY_TOKEN) res.status(200).send(challenge);
-  else res.sendStatus(403);
+  if (mode === "subscribe" && token === VERIFY_TOKEN) return res.status(200).send(challenge);
+  res.sendStatus(403);
 });
 
 r.post("/", async (req, res) => {
+  console.log("🔥 [WEBHOOK] Incoming Event:", JSON.stringify(req.body, null, 2));
   const body = req.body;
   const db = getDB();
 
   if (body.object === "instagram") {
     for (const entry of body.entry) {
+      // 1. Messaging (DMs)
       if (entry.messaging) {
-        const messaging = entry.messaging[0];
-        const sender_id = messaging.sender.id;
-        const recipient_id = messaging.recipient.id;
-        const text = messaging.message?.text;
+        for (const messaging of entry.messaging) {
+            const sender_id = messaging.sender.id;
+            const recipient_id = messaging.recipient.id; // Page/User ID
+            const text = messaging.message?.text;
 
-        if (text) {
-          const bot = await db.collection("bots").findOne({ ig_user_id: recipient_id });
-          if (bot && bot.is_active && bot.ig_access_token) {
-            try {
-                const history = await db.collection("conversations")
-                    .find({ bot_id: bot._id, external_user_id: sender_id })
-                    .sort({ timestamp: 1 }).limit(5).toArray();
+            if (text) {
+                // Find Bot linked to this IG Account
+                const bot = await db.collection("bots").findOne({ ig_user_id: recipient_id });
+                if (bot && bot.is_active && bot.ig_access_token) {
+                    try {
+                        // Get Products for Knowledge
+                        const products = await db.collection("products").find({ botId: bot._id }).toArray();
+                        const productContext = products.map(p => `${p.name}: ${p.price} AZN. ${p.description}`).join("\n");
 
-                const messages = [
-                    { role: "system", content: `${bot.prompt}\n\nKNOWLEDGE BASE:\n${bot.knowledge_base}` },
-                    ...history.map(h => ({ role: h.role, content: h.content })),
-                    { role: "user", content: text }
-                ];
+                        const history = await db.collection("conversations")
+                            .find({ bot_id: bot._id, external_user_id: sender_id })
+                            .sort({ timestamp: 1 }).limit(10).toArray();
 
-                const ai_res = await axios.post(LLM_BASE_URL, {
-                    model: "google/gemini-2.0-flash",
-                    messages: messages
-                }, { headers: { "Authorization": `Bearer ${UNIVERSAL_KEY}` } });
+                        const messages = [
+                            { role: "system", content: `${bot.prompt}\n\nSTOK VƏ QİYMƏTLƏR:\n${productContext}` },
+                            ...history.map(h => ({ role: h.role, content: h.content })),
+                            { role: "user", content: text }
+                        ];
 
-                const reply_text = ai_res.data.choices[0].message.content;
-                const decryptedToken = decrypt(bot.ig_access_token);
+                        const ai_res = await axios.post(LLM_BASE_URL, {
+                            model: "google/gemini-2.0-flash",
+                            messages: messages
+                        }, { headers: { "Authorization": `Bearer ${UNIVERSAL_KEY}` } });
 
-                await sendIGMessage(sender_id, reply_text, decryptedToken);
+                        const reply = ai_res.data.choices[0].message.content;
+                        const token = decrypt(bot.ig_access_token);
 
-                await db.collection("logs").insertOne({ bot_id: bot._id, type: "message", from: sender_id, content: text, timestamp: new Date() });
-                await db.collection("conversations").insertMany([
-                    { bot_id: bot._id, external_user_id: sender_id, role: "user", content: text, timestamp: new Date() },
-                    { bot_id: bot._id, external_user_id: sender_id, role: "assistant", content: reply_text, timestamp: new Date() }
-                ]);
-            } catch (err) { console.error("AI/IG Webhook Error:", err.message); }
-          }
+                        await sendIGMessage(sender_id, reply, token);
+
+                        // Logs and History
+                        await db.collection("logs").insertOne({ bot_id: bot._id, type: "message", from: sender_id, content: text, reply: reply, timestamp: new Date() });
+                        await db.collection("conversations").insertMany([
+                            { bot_id: bot._id, external_user_id: sender_id, role: "user", content: text, timestamp: new Date() },
+                            { bot_id: bot._id, external_user_id: sender_id, role: "assistant", content: reply, timestamp: new Date() }
+                        ]);
+                    } catch (err) { console.error("❌ AI Error:", err.message); }
+                }
+            }
         }
       }
+      // 2. Changes (Comments) - logic would be similar...
     }
-    res.status(200).send("EVENT_RECEIVED");
-  } else res.sendStatus(404);
+  }
+  res.status(200).send("EVENT_RECEIVED");
 });
 
 export default r;

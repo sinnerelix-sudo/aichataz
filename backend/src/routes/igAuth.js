@@ -12,14 +12,10 @@ const REDIRECT_URI = "https://aichataz.onrender.com/api/auth/instagram/callback"
 const FRONTEND_URL = process.env.FRONTEND_URL || "https://www.aioperator.social";
 const SCOPE = "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_messages";
 
-// 1. Start OAuth Flow
 r.get("/start", (req, res) => {
   const { bot_id } = req.query;
   if (!bot_id) return res.status(400).send("bot_id is required");
-
-  // Encode bot_id into state as base64url for mobile stability
   const state = Buffer.from(JSON.stringify({ bot_id })).toString("base64url");
-
   const params = new URLSearchParams({
     enable_fb_login: "0",
     force_authentication: "1",
@@ -29,81 +25,47 @@ r.get("/start", (req, res) => {
     scope: SCOPE,
     state: state
   });
-
-  const url = `https://www.instagram.com/oauth/authorize?${params.toString()}`;
-  console.log(`🚀 [IG OAuth] Starting for bot ${bot_id}`);
-  res.redirect(url);
+  res.redirect(`https://www.instagram.com/oauth/authorize?${params.toString()}`);
 });
 
-// 2. OAuth Callback
 r.get("/callback", async (req, res) => {
   const { code, state } = req.query;
+  if (!code) return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=no_code`);
   
-  if (!code) {
-    console.error("❌ [IG OAuth] No code received in callback");
-    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=no_code`);
-  }
-
   let bot_id;
   try {
-    const decodedState = JSON.parse(Buffer.from(state, 'base64url').toString());
-    bot_id = decodedState.bot_id;
+    const decoded = JSON.parse(Buffer.from(state, 'base64url').toString());
+    bot_id = decoded.bot_id;
   } catch (err) {
-    console.error("❌ [IG OAuth] Failed to decode state:", err.message);
     return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=invalid_state`);
   }
 
   try {
-    // Exchange code for Instagram Access Token
     const tokenRes = await axios.post(`https://api.instagram.com/oauth/access_token`, new URLSearchParams({
       client_id: CLIENT_ID,
       client_secret: CLIENT_SECRET,
       grant_type: "authorization_code",
       redirect_uri: REDIRECT_URI,
       code
-    }).toString(), {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
+    }).toString(), { headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
 
-    const access_token = tokenRes.data.access_token;
-    const ig_user_id = tokenRes.data.user_id;
-
-    if (bot_id) {
-      const db = getDB();
-      // Update bot with connection details - ensuring field names match requirements
-      const updateResult = await db.collection("bots").updateOne(
-        { _id: new ObjectId(bot_id) },
-        { 
-          $set: { 
-            ig_access_token: encrypt(access_token), 
-            ig_user_id: ig_user_id,
-            ig_connected: true,
-            ig_connected_at: new Date(),
-            updated_at: new Date(),
-            // Adding specific fields requested for consistency
-            instagramConnected: true,
-            instagramUserId: ig_user_id,
-            encryptedInstagramToken: encrypt(access_token),
-            instagramConnectedAt: new Date()
-          } 
-        }
-      );
-      
-      if (updateResult.matchedCount > 0) {
-        console.log(`✅ [IG OAuth] Bot ${bot_id} linked to IG User ${ig_user_id}`);
-        return res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
-      } else {
-        console.error(`❌ [IG OAuth] Bot ${bot_id} not found in database`);
-        return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error&reason=bot_not_found`);
-      }
-    }
-
-    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
-
+    const { access_token, user_id } = tokenRes.data;
+    const db = getDB();
+    await db.collection("bots").updateOne(
+      { _id: new ObjectId(bot_id) },
+      { $set: { 
+          ig_access_token: encrypt(access_token), 
+          ig_user_id: user_id, 
+          ig_connected: true, 
+          instagramConnected: true,
+          instagramUserId: user_id,
+          encryptedInstagramToken: encrypt(access_token),
+          ig_connected_at: new Date() 
+      }}
+    );
+    res.redirect(`${FRONTEND_URL}/dashboard?instagram=connected&bot_id=${bot_id}`);
   } catch (err) {
-    console.error("❌ [IG OAuth] Token exchange error:", err.response?.data || err.message);
-    return res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
+    res.redirect(`${FRONTEND_URL}/dashboard?instagram=error`);
   }
 });
-
 export default r;
