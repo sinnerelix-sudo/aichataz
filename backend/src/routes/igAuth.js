@@ -8,17 +8,25 @@ const r = Router();
 const CLIENT_ID = process.env.INSTAGRAM_APP_ID || process.env.INSTAGRAM_CLIENT_ID;
 const CLIENT_SECRET = process.env.INSTAGRAM_APP_SECRET || process.env.INSTAGRAM_CLIENT_SECRET;
 const REDIRECT_URI = "https://aichataz.onrender.com/api/auth/instagram/callback";
-const SCOPE = "instagram_business_basic,instagram_manage_comments,instagram_business_manage_messages";
+const SCOPE = "instagram_business_basic,instagram_business_manage_comments,instagram_business_manage_messages";
 
-// Helper to generate the URL
+// Helper to generate the URL with requested params
 const generateAuthUrl = () => {
-  return `https://www.instagram.com/oauth/authorize?force_reauth=true&client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=code&scope=${encodeURIComponent(SCOPE)}`;
+  const params = new URLSearchParams({
+    enable_fb_login: "0",
+    force_authentication: "1",
+    client_id: CLIENT_ID,
+    redirect_uri: REDIRECT_URI,
+    response_type: "code",
+    scope: SCOPE
+  });
+  return `https://www.instagram.com/oauth/authorize?${params.toString()}`;
 };
 
 // 1. Start OAuth Flow for Instagram
 r.get("/start", (req, res) => {
   const url = generateAuthUrl();
-  console.log("🚀 Generated Instagram OAuth URL:", url);
+  console.log("🚀 Updated Instagram OAuth URL:", url);
   res.redirect(url);
 });
 
