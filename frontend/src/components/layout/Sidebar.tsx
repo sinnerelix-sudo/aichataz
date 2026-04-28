@@ -1,4 +1,3 @@
-import React from 'react';
 import { LayoutDashboard, MessageSquare, Settings, Users, LogOut, Sparkles } from 'lucide-react';
 
 const navItems = [
