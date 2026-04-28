@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const plans = [
   {
-    id: 'instagram_pkg',
+    id: 'INSTAGRAM',
     name: 'Instagram Paketi',
     price: '29.90',
     icon: Camera,
@@ -12,7 +12,7 @@ const plans = [
     popular: false
   },
   {
-    id: 'whatsapp_pkg',
+    id: 'WHATSAPP',
     name: 'WhatsApp Paketi',
     price: '29.90',
     icon: MessageCircle,
@@ -21,7 +21,7 @@ const plans = [
     popular: false
   },
   {
-    id: 'combo_pkg',
+    id: 'COMBO',
     name: 'Instagram + WhatsApp',
     price: '39.90',
     icon: Zap,
@@ -30,7 +30,7 @@ const plans = [
     popular: true
   },
   {
-    id: 'multi_pkg',
+    id: 'MULTI_PANEL',
     name: 'Multi-Panel Paket',
     price: '99.90',
     icon: CheckCircle2,
@@ -52,7 +52,7 @@ export default function PricingPage() {
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <h1 className="text-4xl lg:text-6xl font-black text-slate-900 mb-6 tracking-tight">Sizin üçün ən uyğun <span className="text-indigo-600">tarif</span></h1>
-          <p className="text-xl text-slate-500 font-medium">Bütün paketlərə professional AI dəstəyi daxildir.</p>
+          <p className="text-xl text-slate-500 font-medium font-bold">Bütün paketlərə professional AI dəstəyi daxildir.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">

@@ -16,7 +16,7 @@ const app = express();
 const PORT = process.env.PORT || 10000;
 
 app.use(cors({
-  origin: process.env.FRONTEND_URL || "https://www.aioperator.social",
+  origin: ["https://www.aioperator.social", "https://aioperator.social", "http://localhost:5173", "http://localhost:3000"],
   credentials: true
 }));
 app.use(express.json());
